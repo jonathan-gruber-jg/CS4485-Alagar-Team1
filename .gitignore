@@ -1,6 +1,9 @@
-# Ignore vim swap files.
-.sw*
-.*.sw*
+# dependencies
+node_modules/
+
+# env files
+.env
+.env.*
 
 # Ignore Libreoffice lock files.
 .~lock.*#

@@ -1,5 +1,5 @@
 # Backend database.
-backend/dev.db
+backend/**/dev.db
 
 # env files.
 .env

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, DollarSign, Trash2, Plus, Save } from 'lucide-react';
+import { Calendar, DollarSign, Trash2, Plus, Save, Minus } from 'lucide-react';
 import { z } from 'zod';
 import { apiJson } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -34,6 +34,13 @@ const categories = [
   'Other',
 ];
 
+type FieldErrors = {
+  amount?: string;
+  category?: string;
+  date?: string;
+  note?: string;
+};
+
 export function Expenses() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
@@ -41,6 +48,7 @@ export function Expenses() {
   const [items, setItems] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [showForm, setShowForm] = useState(false);
 
   const [amount, setAmount] = useState('');
@@ -82,8 +90,11 @@ export function Expenses() {
   const onAdd = async () => {
     setSaving(true);
     setError(null);
+    setFieldErrors({}); // clear prior field errors each attempt
+
     try {
       const parsed = createExpenseSchema.parse({ amount, category, date, note: note || undefined });
+
       await apiJson('/api/expenses', {
         method: 'POST',
         body: JSON.stringify({
@@ -93,11 +104,41 @@ export function Expenses() {
           note: parsed.note,
         }),
       });
+
       setShowForm(false);
       setAmount('');
       setNote('');
       await refresh();
     } catch (e: any) {
+      // Client-side validation errors
+      if (e instanceof z.ZodError) {
+        const flattened = e.flatten();
+        setFieldErrors({
+          amount: flattened.fieldErrors.amount?.[0],
+          category: flattened.fieldErrors.category?.[0],
+          date: flattened.fieldErrors.date?.[0],
+          note: flattened.fieldErrors.note?.[0],
+        });
+        setError('Please fix the highlighted fields.');
+        return;
+      }
+
+      // Best-effort backend validation parsing (depends on how apiJson throws)
+      // If apiJson throws an object with `data`, `response`, or direct `error`, we try to read it.
+      const server = e?.data || e?.response || e;
+      const serverFieldErrors = server?.error?.fieldErrors;
+
+      if (serverFieldErrors) {
+        setFieldErrors({
+          amount: serverFieldErrors.amount?.[0],
+          category: serverFieldErrors.category?.[0],
+          date: serverFieldErrors.date?.[0],
+          note: serverFieldErrors.note?.[0],
+        });
+        setError('Please fix the highlighted fields.');
+        return;
+      }
+
       setError(e?.message || 'Failed to add expense');
     } finally {
       setSaving(false);
@@ -127,7 +168,7 @@ export function Expenses() {
             onClick={() => setShowForm((v) => !v)}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
-            <Plus className="w-5 h-5" />
+            {showForm ? <Minus className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
             <span>{showForm ? 'Close' : 'Add Expense'}</span>
           </button>
         </div>
@@ -146,12 +187,17 @@ export function Expenses() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
                 <input
+                  type="number"
+                  step="0.01"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   inputMode="decimal"
                   placeholder="12.34"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                 />
+                {fieldErrors.amount ? (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.amount}</p>
+                ) : null}
               </div>
 
               <div>
@@ -167,6 +213,9 @@ export function Expenses() {
                     </option>
                   ))}
                 </select>
+                {fieldErrors.category ? (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.category}</p>
+                ) : null}
               </div>
 
               <div>
@@ -177,6 +226,9 @@ export function Expenses() {
                   onChange={(e) => setDate(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                 />
+                {fieldErrors.date ? (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.date}</p>
+                ) : null}
               </div>
 
               <div>
@@ -187,6 +239,9 @@ export function Expenses() {
                   placeholder="Coffee with friends"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                 />
+                {fieldErrors.note ? (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.note}</p>
+                ) : null}
               </div>
             </div>
 

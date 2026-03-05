@@ -8,7 +8,9 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddAccountMenuOpen, setIsAddAccountMenuOpen] = useState(false);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const displayName = user?.name || 'Student';
+  const displayEmail = user?.email || '';
 
   const handleAddCreditCard = () => {
     alert('Opening add credit card dialog...');
@@ -171,7 +173,7 @@ export function Header() {
                 <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center">
                   <User className="w-5 h-5 text-white" />
                 </div>
-                <span className="font-medium text-gray-900">John Student</span>
+                <span className="font-medium text-gray-900">{displayName}</span>
                 <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -183,8 +185,8 @@ export function Header() {
                   />
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
                     <div className="px-4 py-3 border-b border-gray-100">
-                      <div className="font-medium text-gray-900">John Student</div>
-                      <div className="text-sm text-gray-500">john.student@university.edu</div>
+                      <div className="font-medium text-gray-900">{displayName}</div>
+                      <div className="text-sm text-gray-500">{displayEmail}</div>
                     </div>
                     <button
                       onClick={handleSettings}
@@ -232,8 +234,8 @@ export function Header() {
                     <User className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <div className="font-medium text-gray-900">John Student</div>
-                    <div className="text-sm text-gray-500">john.student@university.edu</div>
+                    <div className="font-medium text-gray-900">{displayName}</div>
+                    <div className="text-sm text-gray-500">{displayEmail}</div>
                   </div>
                 </div>
               </div>

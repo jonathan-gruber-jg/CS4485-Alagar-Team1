@@ -1,5 +1,8 @@
-import { useState } from 'react';
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
 import { Sparkles, DollarSign, TrendingUp, Lightbulb, ChevronRight, Check } from 'lucide-react';
+import { apiJson } from '../lib/api';
 
 const categoryOptions = [
   { name: 'Food & Dining', icon: '🍔', suggestedPercent: 25, color: 'bg-orange-100 text-orange-600' },
@@ -35,71 +38,313 @@ const aiInsights = [
   },
 ];
 
+type BudgetCategory = (typeof categoryOptions)[number] & {
+  amount: number;
+  percent: number;
+};
+
+type BudgetGetResponse = {
+  month: number;
+  year: number;
+  totalLimit: number;
+  categories: Array<{ category: string; allocated: number; percent: number }>;
+};
+
+function round2(n: number) {
+  return Math.round(n * 100) / 100;
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function getMonthYear() {
+  const d = new Date();
+  return { month: d.getMonth() + 1, year: d.getFullYear() };
+}
+
+function buildFromSuggested(income: number): BudgetCategory[] {
+  return categoryOptions.map((cat) => ({
+    ...cat,
+    amount: round2((income * cat.suggestedPercent) / 100),
+    percent: cat.suggestedPercent,
+  }));
+}
+
+function balanceCategories(income: number, cats: BudgetCategory[]): BudgetCategory[] {
+  if (cats.length === 0) return cats;
+
+  const totalAllocated = cats.reduce((sum, c) => sum + c.amount, 0);
+  const remaining = round2(income - totalAllocated);
+
+  if (Math.abs(remaining) < 0.01) return cats;
+
+  const lastIdx = cats.length - 1;
+  const adjusted = [...cats];
+
+  // absorb rounding into last category but never let it go negative
+  const newLast = round2(adjusted[lastIdx].amount + remaining);
+  adjusted[lastIdx] = {
+    ...adjusted[lastIdx],
+    amount: Math.max(0, newLast),
+  };
+
+  adjusted[lastIdx].percent = income > 0 ? (adjusted[lastIdx].amount / income) * 100 : 0;
+  return adjusted;
+}
+
+function wouldGoNegative(income: number, cats: BudgetCategory[]) {
+  const total = cats.reduce((sum, c) => sum + c.amount, 0);
+  return round2(income - total) < -0.01;
+}
+
+const DECIMAL_RE = /^\d*\.?\d*$/;
+
 export function BudgetCreator() {
   const [totalIncome, setTotalIncome] = useState('1200');
-  const [budgetCategories, setBudgetCategories] = useState(
-    categoryOptions.map(cat => ({
-      ...cat,
-      amount: 0,
-      percent: cat.suggestedPercent,
-    }))
-  );
+
+  const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>(() => {
+    const initialIncome = 1200;
+    return balanceCategories(initialIncome, buildFromSuggested(initialIncome));
+  });
+
+  // input buffers so user can type decimals like ".", "12.", "", etc.
+  const [amountInputs, setAmountInputs] = useState<string[]>(() => {
+    const initial = balanceCategories(1200, buildFromSuggested(1200));
+    return initial.map((c) => String(c.amount));
+  });
+
+  const [percentInputs, setPercentInputs] = useState<string[]>(() => {
+    const initial = balanceCategories(1200, buildFromSuggested(1200));
+    return initial.map((c) => String(round2(c.percent)));
+  });
+
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const { month, year } = useMemo(() => getMonthYear(), []);
+
+  const income = useMemo(() => {
+    const n = parseFloat(totalIncome);
+    return Number.isFinite(n) ? Math.max(0, n) : 0;
+  }, [totalIncome]);
+
+  const syncInputsFromCategories = (cats: BudgetCategory[]) => {
+    setAmountInputs(cats.map((c) => String(c.amount)));
+    setPercentInputs(cats.map((c) => String(round2(c.percent))));
+  };
+
+  // Load from backend if budget exists
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadBudget() {
+      setLoading(true);
+      try {
+        const data = (await apiJson(`/api/budgets?month=${month}&year=${year}`)) as BudgetGetResponse;
+
+        if (cancelled) return;
+
+        const loadedIncome = round2(data.totalLimit || 0);
+        setTotalIncome(String(loadedIncome));
+
+        const byName = new Map(data.categories.map((c) => [c.category, c]));
+
+        const merged: BudgetCategory[] = categoryOptions.map((cat) => {
+          const found = byName.get(cat.name);
+          if (!found) {
+            return {
+              ...cat,
+              amount: round2((loadedIncome * cat.suggestedPercent) / 100),
+              percent: cat.suggestedPercent,
+            };
+          }
+
+          const pct = Number.isFinite(found.percent)
+            ? found.percent
+            : (loadedIncome > 0 ? (found.allocated / loadedIncome) * 100 : 0);
+
+          return {
+            ...cat,
+            amount: round2(found.allocated),
+            percent: pct,
+          };
+        });
+
+        const balanced = balanceCategories(loadedIncome, merged);
+        setBudgetCategories(balanced);
+        syncInputsFromCategories(balanced);
+        setStep(3);
+      } catch {
+        // No budget exists yet (or backend down). Keep defaults.
+        setStep(1);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadBudget();
+    return () => {
+      cancelled = true;
+    };
+  }, [month, year]);
 
   const handleIncomeChange = (value: string) => {
+    if (!DECIMAL_RE.test(value)) return;
     setTotalIncome(value);
-    const income = parseFloat(value) || 0;
-    setBudgetCategories(
-      categoryOptions.map(cat => ({
-        ...cat,
-        amount: Math.round((income * cat.suggestedPercent) / 100),
-        percent: cat.suggestedPercent,
-      }))
-    );
+
+    const parsed = parseFloat(value);
+    if (!Number.isFinite(parsed)) {
+      setStep(2);
+      return;
+    }
+
+    const newIncome = Math.max(0, parsed);
+
+    const updated = budgetCategories.map((cat) => ({
+      ...cat,
+      amount: round2((newIncome * cat.percent) / 100),
+    }));
+
+    const balanced = balanceCategories(newIncome, updated);
+    setBudgetCategories(balanced);
+    syncInputsFromCategories(balanced);
+    setStep(2);
   };
 
-  const handleCategoryPercentChange = (index: number, percent: string) => {
-    const percentValue = parseFloat(percent) || 0;
-    const income = parseFloat(totalIncome) || 0;
+  const handleCategoryAmountChange = (index: number, value: string) => {
+    if (!DECIMAL_RE.test(value)) return;
+
+    const nextAmountInputs = [...amountInputs];
+    nextAmountInputs[index] = value;
+    setAmountInputs(nextAmountInputs);
+
+    const parsed = parseFloat(value);
+    if (!Number.isFinite(parsed)) return;
+
+    const amt = clamp(parsed, 0, 1_000_000);
+
     const newCategories = [...budgetCategories];
-    newCategories[index].percent = percentValue;
-    newCategories[index].amount = Math.round((income * percentValue) / 100);
-    setBudgetCategories(newCategories);
+    newCategories[index] = {
+      ...newCategories[index],
+      amount: round2(amt),
+      percent: income > 0 ? (amt / income) * 100 : 0,
+    };
+
+    if (wouldGoNegative(income, newCategories)) {
+      // revert input to last valid value
+      const revert = [...amountInputs];
+      revert[index] = String(budgetCategories[index].amount);
+      setAmountInputs(revert);
+      return;
+    }
+
+    const balanced = balanceCategories(income, newCategories);
+    setBudgetCategories(balanced);
+    syncInputsFromCategories(balanced);
+    setStep(2);
   };
 
-  const handleCategoryAmountChange = (index: number, amount: string) => {
-    const amountValue = parseFloat(amount) || 0;
-    const income = parseFloat(totalIncome) || 0;
+  const handleCategoryPercentChange = (index: number, value: string) => {
+    if (!DECIMAL_RE.test(value)) return;
+
+    const nextPercentInputs = [...percentInputs];
+    nextPercentInputs[index] = value;
+    setPercentInputs(nextPercentInputs);
+
+    const parsed = parseFloat(value);
+    if (!Number.isFinite(parsed)) return;
+
+    const pct = clamp(parsed, 0, 100);
+
     const newCategories = [...budgetCategories];
-    newCategories[index].amount = amountValue;
-    newCategories[index].percent = income > 0 ? (amountValue / income) * 100 : 0;
-    setBudgetCategories(newCategories);
+    newCategories[index] = {
+      ...newCategories[index],
+      percent: pct,
+      amount: round2((income * pct) / 100),
+    };
+
+    if (wouldGoNegative(income, newCategories)) {
+      const revert = [...percentInputs];
+      revert[index] = String(round2(budgetCategories[index].percent));
+      setPercentInputs(revert);
+      return;
+    }
+
+    const balanced = balanceCategories(income, newCategories);
+    setBudgetCategories(balanced);
+    syncInputsFromCategories(balanced);
+    setStep(2);
   };
 
+  const commitAmountOnBlur = (index: number) => {
+    const v = amountInputs[index];
+    const parsed = parseFloat(v);
+    if (Number.isFinite(parsed)) return;
+
+    const next = [...amountInputs];
+    next[index] = String(budgetCategories[index].amount);
+    setAmountInputs(next);
+  };
+
+  const commitPercentOnBlur = (index: number) => {
+    const v = percentInputs[index];
+    const parsed = parseFloat(v);
+    if (Number.isFinite(parsed)) return;
+
+    const next = [...percentInputs];
+    next[index] = String(round2(budgetCategories[index].percent));
+    setPercentInputs(next);
+  };
+
+  // Keep button + UI, just applies suggested percents
   const applyAISuggestions = () => {
-    const income = parseFloat(totalIncome) || 0;
-    setBudgetCategories(
-      categoryOptions.map(cat => ({
-        ...cat,
-        amount: Math.round((income * cat.suggestedPercent) / 100),
-        percent: cat.suggestedPercent,
-      }))
-    );
+    const newCats = balanceCategories(income, buildFromSuggested(income));
+    setBudgetCategories(newCats);
+    syncInputsFromCategories(newCats);
+    setStep(2);
   };
 
   const totalAllocated = budgetCategories.reduce((sum, cat) => sum + cat.amount, 0);
   const totalPercent = budgetCategories.reduce((sum, cat) => sum + cat.percent, 0);
-  const income = parseFloat(totalIncome) || 0;
-  const remaining = income - totalAllocated;
+  const remaining = round2(income - totalAllocated);
 
-  const handleSaveBudget = () => {
-    alert('Budget saved successfully! This would normally save to your database.');
+  const handleSaveBudget = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        month,
+        year,
+        totalLimit: income,
+        categories: budgetCategories.map((c) => ({
+          category: c.name,
+          allocated: round2(c.amount),
+          percent: round2(c.percent),
+        })),
+      };
+
+      await apiJson('/api/budgets', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      setStep(3);
+      alert('Budget saved successfully!');
+    } catch (e: any) {
+      alert(e?.message || 'Failed to save budget.');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return <div className="p-6">Loading budget data...</div>;
+  }
 
   return (
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg">
@@ -110,7 +355,6 @@ export function BudgetCreator() {
           <p className="text-gray-600">Let AI help you create an optimized budget based on your income and goals</p>
         </div>
 
-        {/* Progress Steps */}
         <div className="mb-8 bg-white rounded-xl shadow-lg p-6 border border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -146,21 +390,21 @@ export function BudgetCreator() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Income Input */}
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Monthly Income</h2>
               <div className="relative">
                 <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400" />
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   value={totalIncome}
                   onChange={(e) => handleIncomeChange(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 text-2xl font-bold border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none"
                   placeholder="0.00"
                 />
               </div>
+
               {income > 0 && (
                 <button
                   onClick={applyAISuggestions}
@@ -172,7 +416,6 @@ export function BudgetCreator() {
               )}
             </div>
 
-            {/* Budget Categories */}
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Budget Allocation</h2>
               <div className="space-y-4">
@@ -191,26 +434,32 @@ export function BudgetCreator() {
                         </div>
                       </div>
                     </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
                         <div className="relative">
                           <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                           <input
-                            type="number"
-                            value={category.amount}
+                            type="text"
+                            inputMode="decimal"
+                            value={amountInputs[index] ?? ''}
                             onChange={(e) => handleCategoryAmountChange(index, e.target.value)}
+                            onBlur={() => commitAmountOnBlur(index)}
                             className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none"
                           />
                         </div>
                       </div>
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Percentage</label>
                         <div className="relative">
                           <input
-                            type="number"
-                            value={category.percent.toFixed(1)}
+                            type="text"
+                            inputMode="decimal"
+                            value={percentInputs[index] ?? ''}
                             onChange={(e) => handleCategoryPercentChange(index, e.target.value)}
+                            onBlur={() => commitPercentOnBlur(index)}
                             className="w-full pr-8 pl-3 py-2 border border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none"
                           />
                           <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">%</span>
@@ -222,19 +471,16 @@ export function BudgetCreator() {
               </div>
             </div>
 
-            {/* Save Button */}
             <button
               onClick={handleSaveBudget}
-              disabled={Math.abs(remaining) > 0.01}
+              disabled={saving || Math.abs(remaining) > 0.01}
               className="w-full px-6 py-4 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              {Math.abs(remaining) > 0.01 ? 'Balance Your Budget First' : 'Save Budget'}
+              {saving ? 'Saving...' : Math.abs(remaining) > 0.01 ? 'Balance Your Budget First' : 'Save Budget'}
             </button>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Budget Summary */}
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <h3 className="font-semibold text-gray-900 mb-4">Budget Summary</h3>
               <div className="space-y-3">
@@ -259,15 +505,15 @@ export function BudgetCreator() {
                   </span>
                 </div>
               </div>
+
               {Math.abs(remaining) > 0.01 && (
                 <div className={`mt-4 p-3 rounded-lg ${remaining < 0 ? 'bg-red-50 text-red-700' : 'bg-orange-50 text-orange-700'}`}>
                   <p className="text-sm font-medium">
-                    {remaining < 0 
-                      ? '⚠️ Over budget! Reduce allocations.' 
-                      : '💡 You have unallocated funds.'}
+                    {remaining < 0 ? '⚠️ Over budget! Reduce allocations.' : '💡 You have unallocated funds.'}
                   </p>
                 </div>
               )}
+
               {Math.abs(remaining) < 0.01 && (
                 <div className="mt-4 p-3 rounded-lg bg-green-50 text-green-700">
                   <p className="text-sm font-medium">✅ Budget is balanced!</p>
@@ -275,7 +521,7 @@ export function BudgetCreator() {
               )}
             </div>
 
-            {/* AI Insights */}
+            {/* AI Insights left untouched */}
             <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl shadow-lg p-6 border border-purple-200">
               <div className="flex items-center gap-2 mb-4">
                 <Lightbulb className="w-5 h-5 text-purple-600" />
@@ -285,11 +531,11 @@ export function BudgetCreator() {
                 {aiInsights.map((insight, index) => (
                   <div key={index} className="p-3 bg-white rounded-lg border border-purple-100">
                     <div className="flex items-start gap-2">
-                      <div className={`px-2 py-1 rounded text-xs font-medium ${
-                        insight.impact === 'high' 
-                          ? 'bg-red-100 text-red-700' 
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}>
+                      <div
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          insight.impact === 'high' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                        }`}
+                      >
                         {insight.impact.toUpperCase()}
                       </div>
                     </div>
@@ -300,7 +546,6 @@ export function BudgetCreator() {
               </div>
             </div>
 
-            {/* Quick Stats */}
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <h3 className="font-semibold text-gray-900 mb-4">Quick Stats</h3>
               <div className="space-y-3">
@@ -310,7 +555,10 @@ export function BudgetCreator() {
                     <span className="text-sm text-gray-600">Savings Rate</span>
                   </div>
                   <span className="font-semibold text-gray-900">
-                    {income > 0 ? ((budgetCategories.find(c => c.name === 'Savings')?.amount || 0) / income * 100).toFixed(1) : 0}%
+                    {income > 0
+                      ? (((budgetCategories.find((c) => c.name === 'Savings')?.amount || 0) / income) * 100).toFixed(1)
+                      : 0}
+                    %
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -318,14 +566,13 @@ export function BudgetCreator() {
                     <DollarSign className="w-4 h-4 text-blue-600" />
                     <span className="text-sm text-gray-600">Daily Budget</span>
                   </div>
-                  <span className="font-semibold text-gray-900">
-                    ${(income / 30).toFixed(2)}/day
-                  </span>
+                  <span className="font-semibold text-gray-900">${(income / 30).toFixed(2)}/day</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

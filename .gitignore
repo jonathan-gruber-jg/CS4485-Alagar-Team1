@@ -1,5 +1,5 @@
 # Backend database.
-/budgetwise/backend/**/dev.db
+/budgetwise/backend/**/dev*.db
 /budgetwise/backend/prisma/migrations/*_init/
 
 # env files.

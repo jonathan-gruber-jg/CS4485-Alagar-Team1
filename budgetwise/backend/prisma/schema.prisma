@@ -63,3 +63,11 @@ model Goal {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model ResetPasswordCode {
+	userId String @id
+	hash String
+	createdAt DateTime @default(now())
+
+	user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

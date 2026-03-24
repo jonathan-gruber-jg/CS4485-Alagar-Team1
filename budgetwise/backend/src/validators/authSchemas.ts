@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const PASSWORD_MIN_LENGTH = 8;
-const RESET_PASSWORD_CODE_LENGTH = 0x100;
+export const RESET_PASSWORD_REQUEST_KEY_LENGTH = 0x100;
 
 export const registerSchema = z.object({
   email: z.string().email(),
@@ -20,7 +20,7 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z.object({
 	email: z.string().email(),
-	code: z.string().length(RESET_PASSWORD_CODE_LENGTH),
+	key: z.string().length(RESET_PASSWORD_REQUEST_KEY_LENGTH),
 	password: z.string().min(PASSWORD_MIN_LENGTH),
 });
 

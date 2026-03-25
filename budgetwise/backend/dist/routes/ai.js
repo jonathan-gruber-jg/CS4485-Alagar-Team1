@@ -12,7 +12,7 @@ import { generateDashboardInsights } from "../services/aiInsights.js";
  * 2. Frontend makes GET request to this endpoint with month and year params
  * 3. We fetch user's expenses and budgets for that month from Prisma
  * 4. Aggregate spending by category
- * 5. Call Gemini API to generate 3 personalized recommendations
+ * 5. Call Groq API to generate 3 personalized recommendations
  * 6. Return recommendations as JSON to frontend
  * 7. Frontend renders the 3 recommendations in the "Recommended Actions" section
  *
@@ -45,10 +45,10 @@ export const aiRouter = Router();
  *     "generatedAt": "2026-03-12T14:30:00.000Z"
  *   }
  *
- * Response (503) - If GEMINI_API_KEY is not configured:
+ * Response (503) - If GROQ_API_KEY is not configured:
  *   { "error": "AI insights are not available. Please contact support." }
  *
- * Response (422) - If Gemini output fails validation:
+ * Response (422) - If Groq output fails validation:
  *   { "error": "Failed to generate valid recommendations. Please try again." }
  */
 aiRouter.get("/dashboard-insights", authRequired, async (req, res) => {
@@ -100,7 +100,7 @@ aiRouter.get("/dashboard-insights", authRequired, async (req, res) => {
             const current = budgetByCategory.get(budget.category) ?? 0;
             budgetByCategory.set(budget.category, current + budget.allocated);
         }
-        // Build the spending summary for Gemini
+        // Build the spending summary for Groq
         // Include all categories that have either spending or budget (or both)
         const allCategories = new Set([...spendByCategory.keys(), ...budgetByCategory.keys()]);
         const spendingSummary = Array.from(allCategories).map((category) => ({
@@ -109,7 +109,7 @@ aiRouter.get("/dashboard-insights", authRequired, async (req, res) => {
             allocated: budgetByCategory.get(category) ?? 0,
         }));
         console.log(`[AI Route] Spending summary: ${JSON.stringify(spendingSummary)}`);
-        // Call Gemini to generate recommendations
+        // Call Groq to generate recommendations
         try {
             const recommendations = await generateDashboardInsights(spendingSummary, month, year);
             // Success: return the AI-generated recommendations
@@ -119,25 +119,27 @@ aiRouter.get("/dashboard-insights", authRequired, async (req, res) => {
         }
         catch (aiError) {
             // Check if the error is due to missing API key
-            if (aiError instanceof Error && aiError.message.includes("GEMINI_API_KEY not configured")) {
+            if (aiError instanceof Error && aiError.message.includes("GROQ_API_KEY not configured")) {
                 // API key not configured: return 503 Service Unavailable
                 // Indicates the feature is temporarily disabled, not a client error
-                console.warn("[AI Route] API key not configured");
+                console.warn("[AI Route] GROQ API key not configured");
                 return res.status(503).json({
                     error: "AI insights are not available. Please contact support.",
                 });
             }
             const aiMessage = aiError instanceof Error ? aiError.message : String(aiError);
             // Provider/model availability errors should surface as upstream dependency failure.
-            if (aiMessage.includes("No supported Gemini model is available") ||
+            if (aiMessage.includes("No supported Groq model is available") ||
                 (aiMessage.toLowerCase().includes("model") &&
                     (aiMessage.toLowerCase().includes("not found") ||
                         aiMessage.toLowerCase().includes("unavailable") ||
                         aiMessage.toLowerCase().includes("not supported") ||
                         aiMessage.toLowerCase().includes("does not have access") ||
                         aiMessage.toLowerCase().includes("permission denied") ||
-                        aiMessage.toLowerCase().includes("free tier") ||
-                        aiMessage.includes("404")))) {
+                        aiMessage.toLowerCase().includes("not allowed") ||
+                        aiMessage.toLowerCase().includes("rate limit") ||
+                        aiMessage.includes("404") ||
+                        aiMessage.includes("429")))) {
                 console.error("[AI Route] AI provider/model unavailable:", aiMessage);
                 return res.status(502).json({
                     error: "AI provider model is unavailable. Please try again later or update model configuration.",

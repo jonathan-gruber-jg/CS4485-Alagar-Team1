@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { TrendingDown, TrendingUp, Sparkles, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { TrendingDown, TrendingUp, Sparkles, CheckCircle, Loader2 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { apiJson } from '../lib/api';
 
 // ===== Hardcoded Data (Kept for future AI feature implementation) =====
@@ -13,43 +13,6 @@ const recommendationData = [
   { category: 'Entertainment', current: 125, recommended: 100, status: 'reduce' },
   { category: 'Personal Care', current: 60, recommended: 60, status: 'good' },
   { category: 'Other', current: 40, recommended: 80, status: 'increase' },
-];
-
-// These insights cards are also kept hardcoded for now.
-// In a future phase, these can be replaced with dynamic AI-generated content.
-const insights = [
-  {
-    icon: TrendingDown,
-    type: 'warning',
-    title: 'High Spending Alert',
-    message: 'Your food spending is 20% above the recommended amount for students. Consider meal prepping to save $40/month.',
-    color: 'text-red-400',
-    bgColor: 'bg-red-500/10',
-  },
-  {
-    icon: CheckCircle,
-    type: 'success',
-    title: 'On Track',
-    message: 'Your transportation costs are well-optimized! You\'re using public transit efficiently.',
-    color: 'text-green-400',
-    bgColor: 'bg-green-500/10',
-  },
-  {
-    icon: Sparkles,
-    type: 'tip',
-    title: 'Smart Saving Tip',
-    message: 'Based on your spending patterns, you could save $50 by switching to a student meal plan.',
-    color: 'text-yellow-400',
-    bgColor: 'bg-yellow-500/10',
-  },
-  {
-    icon: TrendingUp,
-    type: 'opportunity',
-    title: 'Budget Reallocation',
-    message: 'Consider allocating more to "Other" for unexpected expenses. You have room in your overall budget.',
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500/10',
-  },
 ];
 
 // ===== Type Definitions =====
@@ -102,14 +65,12 @@ function getIconAndColorForType(type: 'reduce' | 'keepDoing' | 'spendMore') {
  *   - year (optional): Year number, defaults to current year
  * 
  * The component displays:
- * 1. Hardcoded AI Insights Cards (placeholder for future enhancement)
- * 2. Hardcoded Chart showing spending vs recommended amounts
- * 3. Dynamic "Recommended Actions" - fetched from /api/ai/dashboard-insights
+ * 1. Hardcoded Chart showing spending vs recommended amounts
+ * 2. Dynamic "Recommended Actions" - fetched from /api/ai/dashboard-insights
  * 
  * Design Decision: Only the "Recommended Actions" section is dynamic.
- * The chart and insight cards remain hardcoded because:
+ * The chart remains hardcoded because:
  * - Chart data requires complex spend analysis (future feature)
- * - Insight cards will be enhanced with more AI features later
  * - This keeps the initial implementation focused and testable
  */
 export function AIRecommendations({ month, year }: { month?: number; year?: number }) {
@@ -177,26 +138,6 @@ export function AIRecommendations({ month, year }: { month?: number; year?: numb
 
   return (
     <div className="space-y-6">
-      {/* AI Insights Cards - Hardcoded for now */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {insights.map((insight, index) => {
-          const Icon = insight.icon;
-          return (
-            <div key={index} className={`${insight.bgColor} backdrop-blur-sm rounded-lg p-4 border border-white/20`}>
-              <div className="flex items-start gap-3">
-                <div className={`${insight.color} mt-1`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-white mb-1">{insight.title}</h3>
-                  <p className="text-sm text-white/90">{insight.message}</p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
       {/* Recommended vs Current Spending Chart - Hardcoded for now */}
       <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
         <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
@@ -253,7 +194,7 @@ export function AIRecommendations({ month, year }: { month?: number; year?: numb
           </div>
         )}
 
-        {/* Success State: Display the 3 recommendations from Gemini */}
+        {/* Success State: Display the 3 recommendations from Groq */}
         {!loading && !error && recommendations && (
           <div className="space-y-3">
             {recommendations.map((rec, index) => {

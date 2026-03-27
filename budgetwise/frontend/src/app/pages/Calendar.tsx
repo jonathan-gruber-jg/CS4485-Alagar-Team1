@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import {
@@ -79,6 +79,7 @@ export function Calendar() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const didInitToLatestMonth = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) router.push("/login");
@@ -90,6 +91,35 @@ export function Calendar() {
     let cancelled = false;
     setLoading(true);
     setError(null);
+
+    // One-time: jump calendar to most-recent month that has any data.
+    // (Fallback to real current month when there are no transactions.)
+    if (!didInitToLatestMonth.current) {
+      didInitToLatestMonth.current = true;
+      apiJson(`/api/expenses`)
+        .then((data: { expenses?: unknown[] }) => {
+          if (cancelled) return;
+          const items = (data?.expenses || []) as { date: string }[];
+          if (items.length === 0) return;
+
+          let max = new Date(items[0].date);
+          for (const it of items) {
+            const d = new Date(it.date);
+            if (!Number.isNaN(d.getTime()) && d > max) max = d;
+          }
+
+          // Setting these triggers the month-range fetch via effect re-run.
+          setCurrentMonth(max);
+          setSelectedDate(max);
+        })
+        .catch(() => {
+          // ignore; we'll just stay on current month
+        });
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
@@ -195,7 +225,10 @@ export function Calendar() {
                 const dayTransactions = getTransactionsForDate(day);
                 const isSelected = isSameDay(day, selectedDate);
                 const inMonth = isSameMonth(day, currentMonth);
-                const dayTotal = dayTransactions.reduce((sum, t) => (t.type === "expense" ? sum - t.amount : sum + t.amount), 0);
+                const dayTotal = dayTransactions.reduce(
+                  (sum, t) => (t.type === "expense" ? sum - t.amount : sum + t.amount),
+                  0,
+                );
 
                 return (
                   <button
@@ -207,7 +240,7 @@ export function Calendar() {
                     {dayTransactions.length > 0 && (
                       <div className="mt-2 space-y-1">
                         <div className={`text-xs font-semibold ${dayTotal >= 0 ? "text-green-600" : "text-red-600"}`}>
-                          {dayTotal >= 0 ? "+" : ""}${dayTotal.toFixed(0)}
+                          {dayTotal >= 0 ? "+" : ""}${dayTotal.toFixed(2)}
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {Array.from(new Set(dayTransactions.map((t) => t.category)))

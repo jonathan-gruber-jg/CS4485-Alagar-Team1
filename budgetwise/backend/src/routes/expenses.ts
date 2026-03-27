@@ -9,6 +9,18 @@ import { createExpenseSchema, updateExpenseSchema } from "../validators/expenseS
  */
 export const expensesRouter = Router();
 
+function parseYmdLocal(ymd: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  const d = new Date(year, month - 1, day);
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
+}
+
 expensesRouter.get("/", authRequired, async (req: AuthedRequest, res) => {
   const userId = req.user!.id;
   const from = req.query.from as string | undefined;
@@ -17,11 +29,16 @@ expensesRouter.get("/", authRequired, async (req: AuthedRequest, res) => {
   const where: { userId: string; date?: { gte?: Date; lte?: Date } } = { userId };
   if (from || to) {
     where.date = {};
-    if (from) where.date.gte = new Date(from);
+    if (from) {
+      const d = parseYmdLocal(from) ?? new Date(from);
+      if (!Number.isNaN(d.getTime())) where.date.gte = d;
+    }
     if (to) {
-      const toDate = new Date(to);
-      toDate.setHours(23, 59, 59, 999);
-      where.date.lte = toDate;
+      const toDate = parseYmdLocal(to) ?? new Date(to);
+      if (!Number.isNaN(toDate.getTime())) {
+        toDate.setHours(23, 59, 59, 999);
+        where.date.lte = toDate;
+      }
     }
   }
 

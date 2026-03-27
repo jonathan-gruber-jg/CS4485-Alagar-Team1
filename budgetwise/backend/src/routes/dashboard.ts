@@ -8,6 +8,23 @@ import { authRequired, type AuthedRequest } from "../middleware/authRequired.js"
  */
 export const dashboardRouter = Router();
 
+// Categories shown in Budget Creator / charts.
+// Keep this in sync with frontend `BudgetCreator.tsx` categoryOptions.
+const BUDGET_CATEGORIES = [
+  "Rent",
+  "Groceries",
+  "Tuition",
+  "Food & Dining",
+  "Transportation",
+  "Books & Supplies",
+  "Entertainment",
+  "Personal Care",
+  "Health & Fitness",
+  "Utilities",
+  "Savings",
+  "Other",
+];
+
 const CATEGORY_COLORS: Record<string, string> = {
   // Common expense categories
   Rent: "#6366F1",
@@ -24,6 +41,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Books & Supplies": "#45B7D1",
   Housing: "#98D8C8",
   "Personal Care": "#BB8FCE",
+  "Health & Fitness": "#EF4444",
+  Savings: "#10B981",
 
   Other: "#95A5A6",
 };
@@ -45,8 +64,26 @@ function getCategoryColor(category: string, index: number): string {
 dashboardRouter.get("/", authRequired, async (req: AuthedRequest, res) => {
   const userId = req.user!.id;
   const now = new Date();
-  const month = req.query.month ? Number(req.query.month) : now.getMonth() + 1;
-  const year = req.query.year ? Number(req.query.year) : now.getFullYear();
+
+  const monthParam = req.query.month ? Number(req.query.month) : undefined;
+  const yearParam = req.query.year ? Number(req.query.year) : undefined;
+
+  // Time-sync rule: default to the most-recent month that has any transactions.
+  // If user has no transactions, fall back to the real current month.
+  let month = monthParam;
+  let year = yearParam;
+
+  if (!month || !year) {
+    const latest = await prisma.expense.findFirst({
+      where: { userId },
+      orderBy: { date: "desc" },
+      select: { date: true },
+    });
+
+    const anchor = latest?.date ?? now;
+    if (!month) month = anchor.getMonth() + 1;
+    if (!year) year = anchor.getFullYear();
+  }
 
   const startOfMonth = new Date(year, month - 1, 1);
   const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
@@ -63,7 +100,9 @@ dashboardRouter.get("/", authRequired, async (req: AuthedRequest, res) => {
     }),
   ]);
 
-  const totalBudget = budgets.reduce((sum, b) => sum + b.allocated, 0);
+  // BudgetCreator stores the total monthly budget in `totalLimit` (duplicated per category row).
+  // Use the max to be resilient if a partial save occurred.
+  const totalBudget = budgets.reduce((max, b) => (b.totalLimit > max ? b.totalLimit : max), 0);
   const expenseItems = expenses.filter((e) => e.type === "EXPENSE");
   const incomeItems = expenses.filter((e) => e.type === "INCOME");
 
@@ -79,9 +118,11 @@ dashboardRouter.get("/", authRequired, async (req: AuthedRequest, res) => {
   for (const e of expenseItems) {
     spentByCategory.set(e.category, (spentByCategory.get(e.category) ?? 0) + e.amount);
   }
-  const categoryBreakdown = Array.from(spentByCategory.entries()).map(([name], i) => ({
+  // Include all BudgetCreator categories so the pie legend shows every option,
+  // but 0-value categories won't render visible slices.
+  const categoryBreakdown = BUDGET_CATEGORIES.map((name, i) => ({
     name,
-    value: Math.round(spentByCategory.get(name)! * 100) / 100,
+    value: Math.round((spentByCategory.get(name) ?? 0) * 100) / 100,
     color: getCategoryColor(name, i),
   }));
 
@@ -90,10 +131,7 @@ dashboardRouter.get("/", authRequired, async (req: AuthedRequest, res) => {
   for (const e of expenseItems) {
     spentByCat.set(e.category, (spentByCat.get(e.category) ?? 0) + e.amount);
   }
-  const categorySet = new Set<string>([
-    ...budgets.map((b) => b.category),
-    ...expenseItems.map((e) => e.category),
-  ]);
+  const categorySet = new Set<string>(BUDGET_CATEGORIES);
   const remainingByCategory = Array.from(categorySet).map((category) => {
     const allocated = budgets.find((b) => b.category === category)?.allocated ?? 0;
     const spent = spentByCat.get(category) ?? 0;
@@ -101,7 +139,8 @@ dashboardRouter.get("/", authRequired, async (req: AuthedRequest, res) => {
       category,
       allocated: Math.round(allocated * 100) / 100,
       spent: Math.round(spent * 100) / 100,
-      remaining: Math.round((allocated - spent) * 100) / 100,
+      // "Budget Remaining" in the UI is the allocated envelope amount (positive).
+      remaining: Math.round(allocated * 100) / 100,
     };
   });
 

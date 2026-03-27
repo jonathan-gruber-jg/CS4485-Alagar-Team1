@@ -58,6 +58,25 @@ export function Expenses() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [showForm, setShowForm] = useState(false);
 
+  const mostRecentMonthDate = useMemo(() => {
+    if (items.length === 0) return new Date();
+    let max = new Date(items[0].date);
+    for (const it of items) {
+      const d = new Date(it.date);
+      if (!Number.isNaN(d.getTime()) && d > max) max = d;
+    }
+    return max;
+  }, [items]);
+
+  const activeMonthLabel = useMemo(
+    () =>
+      mostRecentMonthDate.toLocaleDateString('en-US', {
+        month: 'long',
+        year: 'numeric',
+      }),
+    [mostRecentMonthDate],
+  );
+
   const [type, setType] = useState<TxType>('EXPENSE');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(expenseCategories[0]);
@@ -118,11 +137,19 @@ export function Expenses() {
   }, [isAuthenticated]);
 
   const totals = useMemo(() => {
-    const incomeTotal = items
+    const y = mostRecentMonthDate.getFullYear();
+    const m = mostRecentMonthDate.getMonth();
+
+    const thisMonthItems = items.filter((x) => {
+      const d = new Date(x.date);
+      return d.getFullYear() === y && d.getMonth() === m;
+    });
+
+    const incomeTotal = thisMonthItems
       .filter((x) => x.type === 'INCOME')
       .reduce((s, x) => s + (x.amount || 0), 0);
 
-    const expenseTotal = items
+    const expenseTotal = thisMonthItems
       .filter((x) => x.type === 'EXPENSE')
       .reduce((s, x) => s + (x.amount || 0), 0);
 
@@ -314,19 +341,19 @@ export function Expenses() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-100">
-            <div className="text-sm text-gray-600">Income</div>
+            <div className="text-sm text-gray-600">Income ({activeMonthLabel})</div>
             <div className="text-lg font-semibold text-green-700 flex items-center gap-1">
               <DollarSign className="w-4 h-4" /> {totals.incomeTotal.toFixed(2)}
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-100">
-            <div className="text-sm text-gray-600">Expenses</div>
+            <div className="text-sm text-gray-600">Expenses ({activeMonthLabel})</div>
             <div className="text-lg font-semibold text-red-700 flex items-center gap-1">
               <DollarSign className="w-4 h-4" /> {totals.expenseTotal.toFixed(2)}
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-100">
-            <div className="text-sm text-gray-600">Net</div>
+            <div className="text-sm text-gray-600">Net ({activeMonthLabel})</div>
             <div
               className={`text-lg font-semibold flex items-center gap-1 ${
                 totals.net >= 0 ? 'text-gray-900' : 'text-red-700'

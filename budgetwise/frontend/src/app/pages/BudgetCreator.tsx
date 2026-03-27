@@ -127,7 +127,34 @@ export function BudgetCreator() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const { month, year } = useMemo(() => getMonthYear(), []);
+  const [{ month, year }, setMonthYear] = useState(() => getMonthYear());
+
+  // Time-sync rule: default Budget Creator to the most-recent month that has any transactions.
+  // If user has no transactions, fall back to the real current month.
+  useEffect(() => {
+    let cancelled = false;
+    apiJson('/api/expenses')
+      .then((data: { expenses?: unknown[] }) => {
+        if (cancelled) return;
+        const items = (data?.expenses || []) as { date: string }[];
+        if (items.length === 0) return;
+
+        let max = new Date(items[0].date);
+        for (const it of items) {
+          const d = new Date(it.date);
+          if (!Number.isNaN(d.getTime()) && d > max) max = d;
+        }
+
+        setMonthYear({ month: max.getMonth() + 1, year: max.getFullYear() });
+      })
+      .catch(() => {
+        // ignore
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const income = useMemo(() => {
     const n = parseFloat(totalIncome);

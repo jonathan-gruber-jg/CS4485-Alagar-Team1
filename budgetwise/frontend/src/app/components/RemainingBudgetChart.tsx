@@ -41,8 +41,8 @@ export function RemainingBudgetChart({ data }: RemainingBudgetChartProps) {
           contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
         />
         <Legend />
-        <Bar dataKey="spent" fill="#8884d8" name="Spent" />
-        <Bar dataKey="remaining" name="Remaining" fill="#82ca9d" />
+        <Bar dataKey="spent" fill="#DC2626" name="Spent" />
+        <Bar dataKey="remaining" fill="#8884d8" name="Budget Remaining" />
       </BarChart>
     </ResponsiveContainer>
   );

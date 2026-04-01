@@ -90,25 +90,40 @@ authRouter.post("/forgot-password", async (req, res) => {
 	const MESSAGE_SUBMISSION_PORT = 587;
 
 	const mailServerName = process.env.MAIL_SERVER_NAME ?? "localhost";
+
 	let mailServerPort = process.env.MAIL_SERVER_PORT;
 	let mailServerSecure = process.env.MAIL_SERVER_SECURE;
 
-	if (mailServerPort == null || mailServerPort == "") {
-		if (mailServerSecure == null || mailServerSecure == "") {
+	if (mailServerSecure != undefined) {
+		mailServerSecure = mailServerSecure != "";
+	}
+	if (mailServerPort == undefined || mailServerPort == "") {
+		if (mailServerSecure == undefined) {
 			mailServerSecure = true;
 		}
 
 		mailServerPort = mailServerSecure
 			? MESSAGE_SUBMISSION_TLS_PORT
 			: MESSAGE_SUBMISSION_PORT;
-	} else if (mailServerSecure == null || mailServerSecure == "") {
+	} else if (mailServerSecure == undefined) {
 		mailServerSecure = mailServerPort == MESSAGE_SUBMISSION_TLS_PORT;
 	}
+
+	let mailServerAuth = null;
+	try {
+		mailServerAuth = JSON.parse(process.env.MAIL_SERVER_AUTH);
+	} catch {
+		/* Nothing. */
+	}
+
+	const mailSender = process.env.MAIL_SERVER_RESET_PASSWORD_SENDER
+		?? `Budgetwise <no-reply@${req.hostname}>`;
 
 	const mailTransport = nodemailer.createTransport({
 		host: mailServerName,
 		port: mailServerPort,
 		secure: mailServerSecure,
+		auth: mailServerAuth,
 	});
 
 	let resetPasswordUrl = new URL(
@@ -120,9 +135,7 @@ authRouter.post("/forgot-password", async (req, res) => {
 
 	return mailTransport.sendMail(
 		{
-			from: `\
-Budgetwise <${process.env.MAIL_SERVER_RESET_PASSWORD_SENDER}>\
-`,
+			from: mailSender,
 			to: `${user.name} <${user.email}>`,
 			subject: "Reset Your Account Password",
 			text: `\
@@ -139,7 +152,7 @@ Budgetwise\
 `,
 		},
 		(err, info) => {
-			console.log(`Reset-password email: ${info}`);
+			console.log(`Reset-password email: ${JSON.stringify(info)}`);
 
 			if (err) {
 				return res.status(500).json({ error: err });

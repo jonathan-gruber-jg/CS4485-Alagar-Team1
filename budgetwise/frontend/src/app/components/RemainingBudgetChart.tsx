@@ -8,13 +8,14 @@ export type RemainingBudgetDatum = {
 };
 
 const defaultRemainingData: RemainingBudgetDatum[] = [
-  { category: 'Food & Dining', allocated: 400, spent: 320, remaining: 80 },
+  { category: 'Rent', allocated: 600, spent: 500, remaining: 100 },
+  { category: 'Groceries', allocated: 200, spent: 180, remaining: 20 },
+  { category: 'Tuition', allocated: 300, spent: 250, remaining: 50 },
   { category: 'Transportation', allocated: 100, spent: 85, remaining: 15 },
-  { category: 'Books & Supplies', allocated: 200, spent: 150, remaining: 50 },
   { category: 'Entertainment', allocated: 150, spent: 125, remaining: 25 },
-  { category: 'Housing', allocated: 0, spent: 0, remaining: 0 },
   { category: 'Utilities', allocated: 100, spent: 67.5, remaining: 32.5 },
-  { category: 'Personal Care', allocated: 100, spent: 60, remaining: 40 },
+  { category: 'Health', allocated: 80, spent: 45, remaining: 35 },
+  { category: 'Dining', allocated: 120, spent: 95, remaining: 25 },
   { category: 'Other', allocated: 150, spent: 40, remaining: 110 },
 ];
 

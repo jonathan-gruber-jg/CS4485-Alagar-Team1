@@ -14,19 +14,16 @@ const BUDGET_CATEGORIES = [
   "Rent",
   "Groceries",
   "Tuition",
-  "Food & Dining",
   "Transportation",
-  "Books & Supplies",
   "Entertainment",
-  "Personal Care",
-  "Health & Fitness",
   "Utilities",
-  "Savings",
+  "Health",
+  "Dining",
   "Other",
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
-  // Common expense categories
+  // Canonical expense categories
   Rent: "#6366F1",
   Tuition: "#A855F7",
   Groceries: "#16A34A",
@@ -35,15 +32,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   Utilities: "#D97706",
   Health: "#0891B2",
   Dining: "#DC2626",
-
-  // Back-compat / legacy categories used in charts
-  "Food & Dining": "#DC2626",
-  "Books & Supplies": "#45B7D1",
-  Housing: "#98D8C8",
-  "Personal Care": "#BB8FCE",
-  "Health & Fitness": "#EF4444",
-  Savings: "#10B981",
-
   Other: "#95A5A6",
 };
 

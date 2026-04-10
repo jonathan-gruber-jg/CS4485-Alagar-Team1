@@ -31,7 +31,7 @@ function getErrorMessage(error: unknown): string {
         }
     }
 
-    return "";
+    return "Something went wrong.";
 }
 
 export function ResetPassword() {
@@ -86,43 +86,18 @@ export function ResetPassword() {
                 }
             );
 
-            const rawText = await response.text();
-            console.log("reset-password status:", response.status);
-            console.log("reset-password raw response:", rawText);
-
-            let data: any = null;
-            try {
-                data = rawText ? JSON.parse(rawText) : null;
-            } catch {
-                data = rawText;
-            }
+            const data = await response.json();
 
             if (!response.ok) {
-                let backendMessage =
-                    getErrorMessage(data?.error) ||
-                    data?.message ||
-                    (typeof data === "string" ? data : "") ||
-                    "There was a problem resetting your password.";
-
-              
-                if (
-                    backendMessage.includes("256 character") ||
-                    backendMessage.toLowerCase().includes("invalid key") ||
-                    backendMessage.toLowerCase().includes("expired")
-                ) {
-                    backendMessage = "Invalid or expired reset link.";
-                }
-
-                setError(backendMessage);
+                setError(getErrorMessage(data?.error) || "There was a problem resetting your password.");
                 return;
             }
 
             setMessage("Your password has been successfully reset.");
             setPassword("");
             setConfirmPassword("");
-        } catch (err: any) {
-            console.error("reset-password fetch failed:", err);
-            setError(err?.message || "Network error. Please try again.");
+        } catch (err) {
+            setError("There was a problem resetting your password.");
         } finally {
             setLoading(false);
         }
@@ -266,4 +241,3 @@ export function ResetPassword() {
         </div>
     );
 }
-

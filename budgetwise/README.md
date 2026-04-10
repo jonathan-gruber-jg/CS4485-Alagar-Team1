@@ -41,7 +41,7 @@ docker compose down
 
 1) Copy your spreadsheet into:
 
-backend/mock-data/personal_transactions_budgetwise_2025_2026.xlsx
+backend/mock-data/personal\_transactions\_budgetwise\_2025\_2026.xlsx
 
 2) Start DB + app:
 
@@ -64,7 +64,7 @@ You must have PostgreSQL running locally.
 
 Example connection string:
 
-DATABASE_URL="postgresql://myapp:secret@localhost:5433/myapp_db"
+DATABASE\_URL="postgresql://myapp:secret@localhost:5433/myapp\_db"
 
 ---
 
@@ -77,14 +77,16 @@ cp .env.example .env
 
 Edit backend/.env:
 
-DATABASE_URL="postgresql://myapp:secret@localhost:5433/myapp_db"
-JWT_SECRET="budgetwise_dev_secret_9f3a2c1d7e6b5a4c8d1f0e9b2a7c6d5e"
+DATABASE\_URL="postgresql://myapp:secret@localhost:5433/myapp\_db"
+JWT\_SECRET="budgetwise\_dev\_secret\_9f3a2c1d7e6b5a4c8d1f0e9b2a7c6d5e"
 PORT=5001
-CORS_ORIGIN="http://localhost:3000"
+CORS\_ORIGIN="http://localhost:3000"
 
-Also set the MAIL_SERVER_* variables in this file.
+Also set the MAIL\_SERVER_* variables in this file.
 A description and an example configuration of these variables
 are provided in .env.example.
+The document mail-config-howto.md also provides a walkthrough
+upon setting up a working configuration with these variables.
 
 Install and run:
 
@@ -179,6 +181,6 @@ docker compose up --build
 
 • Do not commit backend/.env  
 • Do not commit frontend/.env.local  
-• Do not commit node_modules  
+• Do not commit node\_modules
 • Keep API keys server side only  
 • Use PostgreSQL for all environments

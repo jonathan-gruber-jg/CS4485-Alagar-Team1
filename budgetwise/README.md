@@ -4,18 +4,18 @@ Full stack BudgetWise app with Next.js frontend and Express Prisma backend.
 
 ## Tech Stack
 
-• Frontend: Next.js, TypeScript  
-• Backend: Express, TypeScript, Prisma  
-• Database: PostgreSQL  
-• Auth: JWT  
-• Containerization: Docker, Docker Compose  
+* Frontend: Next.js, TypeScript
+* Backend: Express, TypeScript, Prisma
+* Database: PostgreSQL
+* Auth: JWT
+* Containerization: Docker, Docker Compose
 
 ## Project Structure
 
-• backend: API server  
-• frontend: Next.js UI  
-• openapi: API contract for current and future endpoints  
-• design: reference prototypes if included  
+* backend: API server
+* frontend: Next.js UI
+* openapi: API contract for current and future endpoints
+* design: reference prototypes if included
 
 ---
 
@@ -29,9 +29,9 @@ docker compose up --build
 
 Services:
 
-• Frontend: http://localhost:3000  
-• Backend: http://localhost:5001  
-• PostgreSQL: localhost:5433  
+* Frontend: http://localhost:3000
+* Backend: http://localhost:5001
+* PostgreSQL: localhost:5432
 
 Stop services:
 
@@ -39,15 +39,15 @@ docker compose down
 
 ### Import Mock Data with Docker
 
-1) Copy your spreadsheet into:
+1\. Copy your spreadsheet into:
 
 backend/mock-data/personal\_transactions\_budgetwise\_2025\_2026.xlsx
 
-2) Start DB + app:
+2\. Start DB + app:
 
 docker compose up --build
 
-3) In a second terminal (repo root), run the one-off seed:
+3\. In a second terminal (repo root), run the one-off seed:
 
 docker compose --profile tools run --rm mock-seed
 
@@ -64,7 +64,7 @@ You must have PostgreSQL running locally.
 
 Example connection string:
 
-DATABASE\_URL="postgresql://myapp:secret@localhost:5433/myapp\_db"
+DATABASE\_URL="postgresql://myapp:secret@localhost:5432/myapp\_db"
 
 ---
 
@@ -73,14 +73,15 @@ DATABASE\_URL="postgresql://myapp:secret@localhost:5433/myapp\_db"
 From repo root:
 
 cd backend
+
 cp .env.example .env
 
 Edit backend/.env:
 
-DATABASE\_URL="postgresql://myapp:secret@localhost:5433/myapp\_db"
-JWT\_SECRET="budgetwise\_dev\_secret\_9f3a2c1d7e6b5a4c8d1f0e9b2a7c6d5e"
-PORT=5001
-CORS\_ORIGIN="http://localhost:3000"
+* DATABASE\_URL="postgresql://myapp:secret@localhost:5432/myapp\_db"
+* JWT\_SECRET="budgetwise\_dev\_secret\_9f3a2c1d7e6b5a4c8d1f0e9b2a7c6d5e"
+* PORT=5001
+* CORS\_ORIGIN="http://localhost:3000"
 
 Also set the MAIL\_SERVER_* variables in this file.
 A description and an example configuration of these variables
@@ -91,8 +92,11 @@ upon setting up a working configuration with these variables.
 Install and run:
 
 npm install
+
 npx prisma generate
+
 npx prisma migrate dev --name init
+
 npm run dev
 
 For mock data: npm run dev:mock
@@ -109,7 +113,9 @@ http://localhost:5001
 Open a second terminal:
 
 cd frontend
+
 npm install
+
 npm run dev
 
 Frontend runs on:
@@ -120,15 +126,15 @@ http://localhost:3000
 
 # Database Commands
 
-Run migrations:
+## Run migrations:
 
 npx prisma migrate dev
 
-Generate client:
+## Generate client:
 
 npx prisma generate
 
-Reset database:
+## Reset database:
 
 npx prisma migrate reset
 
@@ -161,26 +167,28 @@ docker compose logs -f
 
 # Troubleshooting
 
-Port 5001 already in use
+## Port 5001 already in use
 
 lsof -nP -iTCP:5001 -sTCP:LISTEN
-kill -9 <PID>
 
-Port 3000 already in use
+kill -9 &lt;PID&gt;
 
-npm run dev -- -p 3001
+## Port 3000 already in use
 
-Docker rebuild
+npm run dev \-\- -p 3001
+
+## Docker rebuild
 
 docker compose down -v
+
 docker compose up --build
 
 ---
 
 # Notes
 
-• Do not commit backend/.env  
-• Do not commit frontend/.env.local  
-• Do not commit node\_modules
-• Keep API keys server side only  
-• Use PostgreSQL for all environments
+* Do not commit backend/.env
+* Do not commit frontend/.env.local
+* Do not commit node\_modules
+* Keep API keys server side only
+* Use PostgreSQL for all environments

@@ -283,7 +283,7 @@ export function Settings() {
               {linkedLoading && <p className="text-sm text-gray-600">Loading linked accounts...</p>}
 
               {!linkedLoading && linkedAccounts.length === 0 && (
-                <p className="text-sm text-gray-600">No Plaid accounts linked yet. Use Add Account {'->'} Credit Card.</p>
+                <p className="text-sm text-gray-600">No Plaid accounts linked yet. Use the Link with Plaid button in the header.</p>
               )}
 
               {linkedAccounts.map((account) => (

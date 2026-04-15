@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CreditCard, Landmark, Settings, LogOut, User, ChevronDown, Menu, X, LayoutDashboard, Receipt, Sparkles, CalendarDays } from 'lucide-react';
+import { CreditCard, Settings, LogOut, User, ChevronDown, Menu, X, LayoutDashboard, Receipt, Sparkles, CalendarDays } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usePlaidLink } from 'react-plaid-link';
 import { createPlaidLinkToken, exchangePlaidPublicToken } from '../lib/api';
@@ -8,7 +8,6 @@ import { createPlaidLinkToken, exchangePlaidPublicToken } from '../lib/api';
 export function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAddAccountMenuOpen, setIsAddAccountMenuOpen] = useState(false);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [plaidToken, setPlaidToken] = useState<string | null>(null);
   const [isPreparingPlaid, setIsPreparingPlaid] = useState(false);
@@ -48,7 +47,6 @@ export function Header() {
   }, [openPlaid, plaidReady, shouldOpenPlaid]);
 
   const handleAddCreditCard = async () => {
-    setIsAddAccountMenuOpen(false);
     setIsMobileMenuOpen(false);
 
     try {
@@ -61,11 +59,6 @@ export function Header() {
     } finally {
       setIsPreparingPlaid(false);
     }
-  };
-
-  const handleAddBankAccount = () => {
-    alert('Bank account linking is coming soon. Use Credit Card for Plaid Sandbox testing.');
-    setIsAddAccountMenuOpen(false);
   };
 
   const handleSignOut = () => {
@@ -162,49 +155,14 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-4">
-            {/* Add Account Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setIsAddAccountMenuOpen(!isAddAccountMenuOpen)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                disabled={isPreparingPlaid}
-              >
-                <CreditCard className="w-4 h-4" />
-                <span>{isPreparingPlaid ? 'Preparing Plaid...' : 'Add Account'}</span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${isAddAccountMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {isAddAccountMenuOpen && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-10" 
-                    onClick={() => setIsAddAccountMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
-                    <button
-                      onClick={handleAddCreditCard}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                    >
-                      <CreditCard className="w-5 h-5 text-indigo-600" />
-                      <div className="text-left">
-                        <div className="font-medium text-gray-900">Credit Card</div>
-                        <div className="text-xs text-gray-500">Link your credit card</div>
-                      </div>
-                    </button>
-                    <button
-                      onClick={handleAddBankAccount}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                    >
-                      <Landmark className="w-5 h-5 text-green-600" />
-                      <div className="text-left">
-                        <div className="font-medium text-gray-900">Bank Account</div>
-                        <div className="text-xs text-gray-500">Connect your bank</div>
-                      </div>
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            <button
+              onClick={handleAddCreditCard}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              disabled={isPreparingPlaid}
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>{isPreparingPlaid ? 'Preparing Plaid...' : 'Link with Plaid'}</span>
+            </button>
 
             {/* User Menu Dropdown */}
             <div className="relative">
@@ -341,27 +299,20 @@ export function Header() {
   </Link>
 </div>
 
-              {/* Add Accounts */}
+              {/* Link with Plaid */}
               <div className="space-y-2">
-                <p className="px-4 text-sm font-medium text-gray-500">Add Account</p>
+                <p className="px-4 text-sm font-medium text-gray-500">Link with Plaid</p>
                 <button
                   onClick={handleAddCreditCard}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors"
+                  disabled={isPreparingPlaid}
                 >
                   <CreditCard className="w-5 h-5 text-indigo-600" />
                   <div className="text-left">
-                    <div className="font-medium text-gray-900">Credit Card</div>
-                    <div className="text-xs text-gray-500">Link your credit card</div>
-                  </div>
-                </button>
-                <button
-                  onClick={handleAddBankAccount}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  <Landmark className="w-5 h-5 text-green-600" />
-                  <div className="text-left">
-                    <div className="font-medium text-gray-900">Bank Account</div>
-                    <div className="text-xs text-gray-500">Connect your bank</div>
+                    <div className="font-medium text-gray-900">
+                      {isPreparingPlaid ? 'Preparing Plaid...' : 'Link with Plaid'}
+                    </div>
+                    <div className="text-xs text-gray-500">Connect your account via Plaid</div>
                   </div>
                 </button>
               </div>

@@ -16,6 +16,16 @@ services:
       timeout: 5s
       retries: 20
 
+  mail-server:
+    build:
+      context: mail-server
+    hostname: mail.budgetwise.local
+    ports:
+      - "10025:25"
+      - "10465:465"
+      - "10587:587"
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
@@ -23,6 +33,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mail-server:
+        condition: service_started
     environment:
       DATABASE_URL: postgresql://myapp:secret@db:5432/myapp_db
       JWT_SECRET: budgetwise_dev_secret_9f3a2c1d7e6b5a4c8d1f0e9b2a7c6d5e
@@ -30,6 +42,9 @@ services:
       CORS_ORIGIN: http://localhost:10000
       OPENAI_API_KEY: ""
       MOCK_DATA_XLSX: /app/mock-data/personal_transactions_budgetwise_2025_2026.xlsx
+      FRONTEND_HOSTNAME: www.budgetwise.local
+      MAIL_SERVER_PORT: 10587
+      MAIL_SERVER_DOMAIN: budgetwise.local
     ports:
       - "5001:5001"
     volumes:
@@ -59,6 +74,7 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    hostname: www.budgetwise.local
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:5001
     ports:

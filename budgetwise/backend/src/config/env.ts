@@ -7,14 +7,18 @@ const envSchema = z.object({
   FRONTEND_HOSTNAME: z.string().default(os.hostname()),
   /* Mail server configuration. */
   MAIL_SERVER_NAME: z.string().default("localhost"),
-  /* 465 is the standard port for email message submission over TLS. */
-  MAIL_SERVER_PORT: z.coerce.number().default(465),
-  MAIL_SERVER_SECURE: z.coerce.boolean().default(true),
-  MAIL_SERVER_USER: z.string().optional(),
-  MAIL_SERVER_PASSWORD: z.string().optional(),
-  /* Sender of reset-password emails. */
-  RESET_PASSWORD_SENDER_NAME: z.string().default("Budgetwise"),
-  RESET_PASSWORD_SENDER_ADDRESS: z.string().email().default("no-reply@localhost"),
+  /* 587 is the standard port for email message submission
+   * not (initially) over TLS. */
+  MAIL_SERVER_PORT: z.coerce.number().default(587),
+  MAIL_SERVER_TLS_SECURITY_LEVEL: z.enum(['0', '1', '2'])
+    .transform(Number)
+    .default(0),
+  MAIL_SERVER_TLS_WRAPPER_MODE: z.enum(['0', '1'])
+    .transform(x => Boolean(Number(x)))
+    .default(false),
+  MAIL_SERVER_DOMAIN: z.string().default(os.hostname()),
+  MAIL_SERVER_MBOX_NO_REPLY_LOCAL_PART: z.string().default('no-reply'),
+  MAIL_SERVER_MBOX_NO_REPLY_DISPLAY_NAME: z.string().default('Budgetwise'),
   // JWT_*
   JWT_SECRET: z.string().min(10, "JWT_SECRET must be at least 10 characters").default("dev_secret_change_me"),
   JWT_EXPIRES_IN: z.string().default("7d"),

@@ -88,11 +88,9 @@ authRouter.post("/forgot-password", async (req, res) => {
     const mailTransport = nodemailer.createTransport({
         host: env.MAIL_SERVER_NAME,
         port: env.MAIL_SERVER_PORT,
-        secure: env.MAIL_SERVER_SECURE,
-        auth: {
-            user: env.MAIL_SERVER_USER,
-            pass: env.MAIL_SERVER_PASSWORD,
-        },
+        secure: env.MAIL_SERVER_TLS_WRAPPER_MODE,
+        ignoreTLS: env.MAIL_SERVER_TLS_SECURITY_LEVEL == 0,
+        requireTLS: env.MAIL_SERVER_TLS_SECURITY_LEVEL == 2,
     });
 
     let resetPasswordUrl = new URL("/reset-password", env.CORS_ORIGIN);
@@ -102,8 +100,10 @@ authRouter.post("/forgot-password", async (req, res) => {
 
     const resetPasswordEmailMessage = {
         from: {
-            name: env.RESET_PASSWORD_SENDER_NAME,
-            address: env.RESET_PASSWORD_SENDER_ADDRESS,
+            name: env.MAIL_SERVER_MBOX_NO_REPLY_DISPLAY_NAME,
+            address: env.MAIL_SERVER_MBOX_NO_REPLY_LOCAL_PART
+                + '@'
+                + env.MAIL_SERVER_DOMAIN,
         },
         to: {
             name: user.name,

@@ -95,7 +95,7 @@ authRouter.post("/forgot-password", async (req, res) => {
 		},
 	});
 
-	let resetPasswordUrl = new URL("/reset-password", env.CORS_ORIGIN);
+	const resetPasswordUrl = new URL("/reset-password", env.CORS_ORIGIN);
 	resetPasswordUrl.searchParams.set("email", user.email);
 	resetPasswordUrl.searchParams.set("key", key);
 

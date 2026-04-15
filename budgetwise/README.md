@@ -7,6 +7,7 @@ Full stack BudgetWise app with Next.js frontend and Express Prisma backend.
 * Frontend: Next.js, TypeScript
 * Backend: Express, TypeScript, Prisma
 * Database: PostgreSQL
+* Mail server: Postfix 3.11+
 * Auth: JWT
 * Containerization: Docker, Docker Compose
 
@@ -14,6 +15,7 @@ Full stack BudgetWise app with Next.js frontend and Express Prisma backend.
 
 * backend: API server
 * frontend: Next.js UI
+* mail-server: files for mail server
 * openapi: API contract for current and future endpoints
 * design: reference prototypes if included
 
@@ -32,6 +34,7 @@ Services:
 * Frontend: http://localhost:3000
 * Backend: http://localhost:5001
 * PostgreSQL: localhost:5432
+* Mail server: localhost:10025, localhost:10465, localhost:10587
 
 Stop services:
 
@@ -68,7 +71,14 @@ DATABASE\_URL="postgresql://myapp:secret@localhost:5432/myapp\_db"
 
 ---
 
-## 2. Backend
+## 2. Mail server
+
+You must have Postfix 3.11 installed and running locally.
+The details will depend upon your operating system.
+
+---
+
+## 3. Backend
 
 From repo root:
 
@@ -82,12 +92,11 @@ Edit backend/.env:
 * JWT\_SECRET="budgetwise\_dev\_secret\_9f3a2c1d7e6b5a4c8d1f0e9b2a7c6d5e"
 * PORT=5001
 * CORS\_ORIGIN="http://localhost:3000"
-
-Also set the MAIL\_SERVER_* variables in this file.
-A description and an example configuration of these variables
-are provided in .env.example.
-The document mail-config-howto.md also provides a walkthrough
-upon setting up a working configuration with these variables.
+* Appropriately set or comment out each of the MAIL\_SERVER_* variables,
+depending upon how you configured the mail server.
+The defaults should probably suffice,
+depending upon your configuration of the mail server,
+of course.
 
 Install and run:
 
@@ -108,7 +117,7 @@ http://localhost:5001
 
 ---
 
-## 3. Frontend
+## 4. Frontend
 
 Open a second terminal:
 

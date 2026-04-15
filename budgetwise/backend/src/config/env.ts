@@ -12,7 +12,7 @@ const envSchema = z.object({
   MAIL_SERVER_PASSWORD: z.string().optional(),
   /* Sender of reset-password emails. */
   RESET_PASSWORD_SENDER_NAME: z.string().default("Budgetwise"),
-  RESET_PASSWORD_SENDER_ADDRESS: z.string().email().default("no-reply@localhost"),
+  RESET_PASSWORD_SENDER_ADDRESS: z.string().email().default("no-reply@example.com"),
   // JWT_*
   JWT_SECRET: z.string().min(10, "JWT_SECRET must be at least 10 characters").default("dev_secret_change_me"),
   JWT_EXPIRES_IN: z.string().default("7d"),

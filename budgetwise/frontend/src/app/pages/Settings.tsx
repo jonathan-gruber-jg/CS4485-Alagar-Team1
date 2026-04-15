@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { User, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiJson, listPlaidLinkedAccounts, syncPlaidLinkedAccount, type LinkedPlaidAccount } from '../lib/api';

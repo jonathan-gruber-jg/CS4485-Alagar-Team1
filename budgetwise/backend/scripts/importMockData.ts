@@ -133,9 +133,14 @@ async function main() {
 }
 
 main()
-  .catch((err) => {
+  .catch(async (err) => {
     console.error(err);
-    process.exitCode = 1;
+    try {
+      await prisma.$disconnect();
+    } catch {
+      // ignore
+    }
+    process.exit(1);
   })
   .finally(async () => {
     try {

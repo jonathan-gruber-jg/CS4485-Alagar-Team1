@@ -2,7 +2,7 @@ name: BudgetWise CI
 
 on:
   push:
-    branches: [main, docker-setup]
+    branches: [main, docker-setup, jonathan-gruber-branch]
   pull_request:
     branches: [main]
 

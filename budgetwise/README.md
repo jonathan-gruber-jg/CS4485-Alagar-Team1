@@ -1,203 +1,272 @@
 # BudgetWise Unified
 
-Full stack BudgetWise app with Next.js frontend and Express Prisma backend.
+Full stack BudgetWise app with Next.js frontend and Express + Prisma backend.
 
 ## Tech Stack
 
-* Frontend: Next.js, TypeScript
-* Backend: Express, TypeScript, Prisma
-* Database: PostgreSQL
-* Mail server: Postfix 3.11+
-* Auth: JWT
-* Containerization: Docker, Docker Compose
+Frontend: Next.js, TypeScript
 
-## Project Structure
+Backend: Express, TypeScript, Prisma
 
-* backend: API server
-* frontend: Next.js UI
-* mail-server: files for mail server
-* openapi: API contract for current and future endpoints
-* design: reference prototypes if included
+Mail server: Postfix 3.10+
+
+Database: PostgreSQL
+
+Auth: JWT
+
+Containerization: Docker, Docker Compose
 
 ---
 
-# Local Setup (Docker Recommended)
+## Project Structure
 
-## Run Everything with Docker
+budgetwise/
+
+* backend: API server
+* frontend: Next.js UI
+* mail-server: mail-server configuration
+* openapi: API contract
+* design: reference prototypes
+
+.github/
+
+* workflows: CI pipeline (GitHub Actions)
+
+---
+
+## CI Pipeline
+
+GitHub Actions runs on:
+
+* push to main and docker-setup
+* pull requests into main
+
+Checks:
+
+* frontend build (Next.js)
+* backend build (TypeScript + Prisma)
+
+View runs in the Actions tab on GitHub.
+
+---
+
+## Local Setup (Docker Recommended)
+
+### Run Everything
 
 From repo root:
 
+```sh
 docker compose up --build
+```
 
 Services:
 
 * Frontend: http://localhost:3000
 * Backend: http://localhost:5001
-* PostgreSQL: localhost:5432
-* Mail server: localhost:10025, localhost:10465, localhost:10587
+* Mail server:
+    each of
+    - smtp://localhost
+    - submissions://localhost
+    - submission://localhost
+* PostgreSQL: postgresql://localhost
 
-Stop services:
+Stop:
 
+```sh
 docker compose down
+```
 
-### Import Mock Data with Docker
+---
 
-1\. Copy your spreadsheet into:
+### Import Mock Data (Docker)
 
-backend/mock-data/personal\_transactions\_budgetwise\_2025\_2026.xlsx
+1. Place file:
 
-2\. Start DB + app:
+```
+backend/mock-data/personal_transactions_budgetwise_2025_2026.xlsx
+```
 
+2. Start services:
+
+```sh
 docker compose up --build
+```
 
-3\. In a second terminal (repo root), run the one-off seed:
+3. Run seed:
 
+```sh
 docker compose --profile tools run --rm mock-seed
-
-This imports data for the mock user into the Docker Postgres database.
-It is optional and does not change normal teammate startup.
+```
 
 ---
 
-# Local Development (Without Docker)
+## Local Development (No Docker)
 
-## 1. Database (PostgreSQL Required)
+### 1. Database
 
-You must have PostgreSQL running locally.
+Ensure PostgreSQL is running.
 
-Example connection string:
+Example:
 
-DATABASE\_URL="postgresql://myapp:secret@localhost:5432/myapp\_db"
-
----
-
-## 2. Mail server
-
-You must have Postfix 3.11 installed and running locally.
-The details will depend upon your operating system.
+```sh
+DATABASE_URL="postgresql://myapp:secret@localhost/myapp_db"
+```
 
 ---
 
-## 3. Backend
+### 2. Mail server
 
-From repo root:
+Ensure Postfix is properly configured and running.
+The details for this depend upon the operating system.
 
-cd backend
+Mail server runs on (depending upon the configuration) each of:
 
+* smtp://localhost
+* submissions://localhost
+* submission://localhost
+
+---
+
+### 3. Backend
+
+```sh
+cd budgetwise/backend
 cp .env.example .env
+```
 
-Edit backend/.env:
+Update `.env`:
 
-* DATABASE\_URL="postgresql://myapp:secret@localhost:5432/myapp\_db"
-* JWT\_SECRET="budgetwise\_dev\_secret\_9f3a2c1d7e6b5a4c8d1f0e9b2a7c6d5e"
-* PORT=5001
-* CORS\_ORIGIN="http://localhost:3000"
-* Appropriately set or comment out each of the MAIL\_SERVER_* variables,
-depending upon how you configured the mail server.
-The defaults should probably suffice,
-depending upon your configuration of the mail server,
-of course.
+```sh
+DATABASE_URL=...
+JWT_SECRET=...
+PORT=5001
+CORS_ORIGIN=http://localhost:3000
 
-Install and run:
+# Or leave unset to use the default of the local machine's hostname.
+FRONTEND_SERVER_NAME=...
 
+# Appropriately set or comment out each of these,
+# depending upon how you configured the mail server.
+# The defaults should probably suffice,
+# depending upon your configuration of the mail server,
+# of course.
+MAIL_SERVER_URL=...
+MAIL_SERVER_DOMAIN=...
+MAIL_SERVER_MBOX_NO_REPLY_DISPLAY_NAME=...
+MAIL_SERVER_MBOX_NO_REPLY_LOCAL_PART=...
+```
+
+Run:
+
+```sh
 npm install
-
 npx prisma generate
-
 npx prisma migrate dev --name init
-
 npm run dev
+```
 
-For mock data: npm run dev:mock
-(username and password for mock user is shown in terminal after using this command)
+Optional mock mode:
+
+```sh
+npm run dev:mock
+```
 
 Backend runs on:
 
-http://localhost:5001
+* http://localhost:5001
 
 ---
 
-## 4. Frontend
+### 4. Frontend
 
-Open a second terminal:
-
-cd frontend
-
+```sh
+cd budgetwise/frontend
 npm install
-
 npm run dev
+```
 
 Frontend runs on:
 
-http://localhost:3000
+* http://localhost:3000
 
 ---
 
-# Database Commands
+## Database Commands
 
-## Run migrations:
-
+```sh
 npx prisma migrate dev
-
-## Generate client:
-
 npx prisma generate
-
-## Reset database:
-
 npx prisma migrate reset
+```
 
 ---
 
-# Docker Commands
+## Docker Commands
 
-Start services:
+Start:
 
+```sh
 docker compose up --build
-
-Import mock data (docker version):
-
-In second terminal: docker compose --profile tools run --rm mock-seed
-Username + password for the mock data account will be given in terminal
+```
 
 Run in background:
 
+```sh
 docker compose up -d
+```
 
-Stop services:
+Stop:
 
+```sh
 docker compose down
+```
 
 View logs:
 
+```sh
 docker compose logs -f
+```
 
 ---
 
-# Troubleshooting
+## Troubleshooting
 
-## Port 5001 already in use
+Port 5001 already in use:
 
+```sh
 lsof -nP -iTCP:5001 -sTCP:LISTEN
+kill -9 <PID>
+```
 
-kill -9 &lt;PID&gt;
+Port 3000 already in use:
 
-## Port 3000 already in use
+```sh
+npm run dev -- -p 3001
+```
 
-npm run dev \-\- -p 3001
+Docker rebuild:
 
-## Docker rebuild
-
+```sh
 docker compose down -v
-
 docker compose up --build
+```
 
 ---
 
-# Notes
+## Best Practices
 
 * Do not commit backend/.env
 * Do not commit frontend/.env.local
 * Do not commit node\_modules
-* Keep API keys server side only
+* Do not commit build output (dist, .next)
+* Keep API keys server-side only
 * Use PostgreSQL for all environments
+
+---
+
+## Deployment Notes (Upcoming)
+
+* App will be deployed using Docker on Render
+* CI must pass before merging to main
+* Health endpoint should be available at `/health`

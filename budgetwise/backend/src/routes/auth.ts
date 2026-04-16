@@ -87,7 +87,7 @@ authRouter.post("/forgot-password", async (req, res) => {
 
     const mailTransport = nodemailer.createTransport(env.MAIL_SERVER_URL);
 
-    let resetPasswordUrl = new URL("/reset-password", env.CORS_ORIGIN);
+    const resetPasswordUrl = new URL("/reset-password", env.CORS_ORIGIN);
     resetPasswordUrl.hostname = env.FRONTEND_SERVER_NAME;
     resetPasswordUrl.searchParams.set("email", user.email);
     resetPasswordUrl.searchParams.set("key", key);

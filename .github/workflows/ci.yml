@@ -2,7 +2,7 @@ name: BudgetWise CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, docker-setup]
   pull_request:
     branches: [main]
 
@@ -13,18 +13,18 @@ jobs:
 
     defaults:
       run:
-        working-directory: frontend
+        working-directory: budgetwise/frontend
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Node for frontend
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: budgetwise/frontend/package-lock.json
 
       - name: Install frontend dependencies
         run: npm ci
@@ -40,18 +40,18 @@ jobs:
 
     defaults:
       run:
-        working-directory: backend
+        working-directory: budgetwise/backend
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Node for backend
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: budgetwise/backend/package-lock.json
 
       - name: Install backend dependencies
         run: npm ci

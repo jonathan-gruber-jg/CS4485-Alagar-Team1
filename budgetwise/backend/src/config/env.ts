@@ -6,7 +6,8 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   FRONTEND_SERVER_NAME: z.string().default(os.hostname()),
   /* Mail server configuration. */
-  MAIL_SERVER_URL: z.string().default("smtp://localhost:587/?ignoreTLS=true"),
+  MAIL_SERVER_URL: z.string().url()
+    .default("smtp://localhost:587/?ignoreTLS=true"),
   MAIL_SERVER_DOMAIN: z.string().default(os.hostname()),
   MAIL_SERVER_MBOX_NO_REPLY_LOCAL_PART: z.string().default('no-reply'),
   MAIL_SERVER_MBOX_NO_REPLY_DISPLAY_NAME: z.string().default('Budgetwise'),

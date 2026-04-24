@@ -1,18 +1,16 @@
+import os from 'node:os';
 import { z } from "zod";
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(5001),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
+  FRONTEND_SERVER_NAME: z.string().default(os.hostname()),
   /* Mail server configuration. */
-  MAIL_SERVER_NAME: z.string().default("localhost"),
-  /* 465 is the standard port for email message submission over TLS. */
-  MAIL_SERVER_PORT: z.coerce.number().default(465),
-  MAIL_SERVER_SECURE: z.coerce.boolean().default(true),
-  MAIL_SERVER_USER: z.string().optional(),
-  MAIL_SERVER_PASSWORD: z.string().optional(),
-  /* Sender of reset-password emails. */
-  RESET_PASSWORD_SENDER_NAME: z.string().default("Budgetwise"),
-  RESET_PASSWORD_SENDER_ADDRESS: z.string().email().default("no-reply@localhost"),
+  MAIL_SERVER_URL: z.string().url()
+    .default("smtp://localhost/?ignoreTLS=true"),
+  MAIL_SERVER_DOMAIN: z.string().default(os.hostname()),
+  MAIL_SERVER_MBOX_NO_REPLY_LOCAL_PART: z.string().default('no-reply'),
+  MAIL_SERVER_MBOX_NO_REPLY_DISPLAY_NAME: z.string().default('Budgetwise'),
   // JWT_*
   JWT_SECRET: z.string().min(10, "JWT_SECRET must be at least 10 characters").default("dev_secret_change_me"),
   JWT_EXPIRES_IN: z.string().default("7d"),
@@ -27,6 +25,15 @@ const envSchema = z.object({
   GROQ_MAX_TOKENS_INSIGHTS: z.coerce.number().int().positive().default(420),
   GROQ_MAX_TOKENS_COMPARISON: z.coerce.number().int().positive().default(480),
   GROQ_MAX_INPUT_CATEGORIES: z.coerce.number().int().positive().default(8),
+  // Plaid Sandbox configuration.
+  PLAID_CLIENT_ID: z.string().default("PLAID-SANDBOX-KEY"),
+  PLAID_SECRET: z.string().default("PLAID-SANDBOX-KEY"),
+  PLAID_ENV: z.enum(["sandbox", "development", "production"]).default("sandbox"),
+  PLAID_PRODUCTS: z.string().default("transactions"),
+  PLAID_COUNTRY_CODES: z.string().default("US"),
+  PLAID_LANGUAGE: z.string().default("en"),
+  PLAID_REDIRECT_URI: z.string().optional(),
+  PLAID_DEMO_DIRECT_IMPORT_ENABLED: z.coerce.boolean().default(false),
 });
 
 export type Env = z.infer<typeof envSchema>;
